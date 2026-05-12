@@ -1,0 +1,11 @@
+{
+  "name": "keycloak-themes-builder",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "tailwindcss -i ./src/input.css -o ./meu-app-realm/login/resources/css/custom.css",
+    "watch": "tailwindcss -i ./src/input.css -o ./meu-app-realm/login/resources/css/custom.css --watch --poll"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
