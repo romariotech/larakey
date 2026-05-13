@@ -74,12 +74,14 @@ class KeycloakAuthService
 
         $response = Http::asForm()->post("$keycloakBaseUrl/realms/$realm/protocol/openid-connect/token", [
             'client_id' => config('services.keycloak.client_id'),
+            'client_secret' => config('services.keycloak.client_secret'),
             'grant_type' => 'password',
             'username' => $username,
             'password' => $password,
         ]);
 
         if (!$response->successful()) {
+
             throw new \Exception('Credenciais inválidas ou acesso negado.');
         }
 

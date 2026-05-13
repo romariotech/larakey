@@ -16,7 +16,7 @@ Route::middleware('auth:external')->group(function () {
         return response()->json([
             'status' => 'sucesso',
             'mensagem' => 'Acesso autorizado pelo Keycloak Guard!',
-            'dados_do_token' => $tokenPayload
+            'dados_do_token' => json_decode($tokenPayload, true)
         ]);
     });
 });

@@ -60,6 +60,12 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
+        ], [
+            'username.required' => 'O campo de nome de usuário é obrigatório.',
+            'password.required' => 'O campo de senha é obrigatório.',
+        ], [
+            'username' => 'nome de usuário',
+            'password' => 'senha',
         ]);
 
         try {
