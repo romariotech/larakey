@@ -54,8 +54,7 @@ class AuthController extends Controller
             return redirect()->intended('/dashboard');
 
         } catch (\Exception $e) {
-            dd($e);
-            // Em caso de erro (ex: usuário cancelou o login), redireciona para a home
+
             return redirect('/')->withErrors(['error' => 'Falha ao autenticar com Keycloak.']);
         }
     }
@@ -65,17 +64,18 @@ class AuthController extends Controller
         $idToken = session('id_token');
 
         Auth::logout();
-
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
-        $logoutUrl = Socialite::driver('keycloak')->getLogoutUrl(
-            url('/'),
-            config('services.keycloak.client_id'),
-            $idToken
-        );
+        $baseUrl = config('services.keycloak.base_url', 'http://localhost:8080/auth');
+        $realm = config('services.keycloak.realms', 'meu-app-realm');
 
-        return inertia()->location($logoutUrl);
+        $keycloakLogoutUrl = "{$baseUrl}/realms/{$realm}/protocol/openid-connect/logout?" . http_build_query([
+            'post_logout_redirect_uri' => url('/'),
+            'id_token_hint' => $idToken,
+            'client_id' => config('services.keycloak.client_id', 'laravel-vue-app'),
+        ]);
+
+        return inertia()->location($keycloakLogoutUrl);
     }
 }
