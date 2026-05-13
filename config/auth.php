@@ -42,6 +42,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'external' => [
+            'driver' => 'keycloak',
+            'provider' => 'users', 
+        ],
     ],
 
     /*
