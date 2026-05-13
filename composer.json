@@ -1,11 +1,20 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/vue-starter-kit",
+    "name": "romario/larakey",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "A Laravel project with Keycloak authentication and Inertia.js frontend.",
     "keywords": [
         "laravel",
-        "framework"
+        "framework",
+        "keycloak",
+        "authentication",
+        "inertia",
+        "vue",
+        "tailwindcss",
+        "vite",
+        "spatie",
+        "permission",
+        "socialite"
     ],
     "license": "MIT",
     "require": {
