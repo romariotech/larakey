@@ -10,8 +10,8 @@ Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')
-    ->middleware('permission:view_dashboard')
-    ->name('dashboard');
+        ->middleware('permission:view_dashboard')
+        ->name('dashboard');
 });
 
-require __DIR__.'/settings.php';
+require __DIR__ . '/settings.php';
