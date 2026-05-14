@@ -38,6 +38,8 @@ class KeycloakAuthService
             $socialiteUser->user['realm_access']['roles'] ?? []
         );
 
+        $user = $user->fresh();
+
         Auth::login($user);
 
         $this->storeTokensInSession($socialiteUser);
