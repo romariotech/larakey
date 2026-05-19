@@ -14,7 +14,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Redireciona o usuário para a tela de login do Keycloak.
+     * Redirect to Keycloak for authentication
      */
     public function redirect()
     {
@@ -24,20 +24,22 @@ class AuthController extends Controller
     }
 
     /**
-     * Recebe o retorno do Keycloak com os dados do usuário.
+     * Handle the callback from Keycloak with user data.
      */
     public function callback()
     {
         try {
             $this->keycloakAuthService->handleKeycloakCallback();
             return redirect()->intended('/dashboard');
+
         } catch (\Exception $e) {
-            return redirect('/')->withErrors(['error' => 'Falha ao autenticar com Keycloak.']);
+
+            return redirect('/')->withErrors(['error' => 'Failed to authenticate with Keycloak: ' . $e->getMessage()]);
         }
     }
 
     /**
-     * Realiza logout do usuário
+     * Logout the user from the application and Keycloak
      */
     public function logout(Request $request)
     {
@@ -53,7 +55,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Autentica com credenciais externas
+     * Login using external credentials (for API clients)
      */
     public function loginExternal(Request $request)
     {
@@ -81,7 +83,7 @@ class AuthController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'erro' => $e->getMessage(),
+                'erro' => 'Failed to authenticate with Keycloak: ' . $e->getMessage(),
             ], 401);
         }
     }

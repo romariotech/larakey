@@ -2,16 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use Http;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Laravel\Socialite\Facades\Socialite;
-use Spatie\Permission\Models\Role;
 
-class KeycloakAuthService
+class KeycloakAuthService extends KeycloakCommonService
 {
     /**
-     * Obter a URL de redirect para o Keycloak
+     * Get the Keycloak redirect URL for authentication
      */
     public function getKeycloakRedirectUrl(): string
     {
@@ -19,18 +17,26 @@ class KeycloakAuthService
     }
 
     /**
-     * Processar o callback do Keycloak
+     * Handle the callback from Keycloak with user data
      *
      * @return void
      * @throws \Exception
      */
     public function handleKeycloakCallback(): void
     {
+        /**
+         * @var \Laravel\Socialite\Two\User $socialiteUser
+         */
         $socialiteUser = Socialite::driver('keycloak')->user();
+
+        $rawUser = $socialiteUser->user;
 
         $user = $this->createOrUpdateUserFromData([
             'email' => $socialiteUser->getEmail(),
-            'name' => $socialiteUser->getName(),
+            'username' => $rawUser['preferred_username'] ?? $socialiteUser->getNickname() ?? $socialiteUser->getEmail(),
+            "keycloak_id" => $rawUser['sub'] ?? null,
+            'first_name' => $rawUser['given_name'] ?? 'User',
+            'last_name' => $rawUser['family_name'] ?? '',
         ]);
 
         $this->syncUserRolesFromArray(
@@ -46,23 +52,19 @@ class KeycloakAuthService
     }
 
     /**
-     * Logout do Keycloak
+     * Get the Keycloak logout URL
      */
     public function getKeycloakLogoutUrl(string $idToken): string
     {
-        $baseUrl = config('services.keycloak.base_url');
-        $realm = config('services.keycloak.realms');
-        $clientId = config('services.keycloak.client_id');
-
-        return "{$baseUrl}/realms/{$realm}/protocol/openid-connect/logout?" . http_build_query([
+        return $this->getKeycloakBaseUrl() . "/protocol/openid-connect/logout?" . http_build_query([
             'post_logout_redirect_uri' => url('/'),
             'id_token_hint' => $idToken,
-            'client_id' => $clientId,
+            'client_id' => $this->clientId,
         ]);
     }
 
     /**
-     * Autenticar com credenciais externas
+     * Login using external credentials (for API clients)
      *
      * @param  string  $username
      * @param  string  $password
@@ -71,11 +73,8 @@ class KeycloakAuthService
      */
     public function authenticateWithCredentials(string $username, string $password): array
     {
-        $keycloakBaseUrl = config('services.keycloak.base_url');
-        $realm = config('services.keycloak.realms');
-
-        $response = Http::asForm()->post("$keycloakBaseUrl/realms/$realm/protocol/openid-connect/token", [
-            'client_id' => config('services.keycloak.client_id'),
+        $response = Http::asForm()->post($this->getKeycloakBaseUrl() . "/protocol/openid-connect/token", [
+            'client_id' => $this->clientId,
             'client_secret' => config('services.keycloak.client_secret'),
             'grant_type' => 'password',
             'username' => $username,
@@ -83,8 +82,7 @@ class KeycloakAuthService
         ]);
 
         if (!$response->successful()) {
-
-            throw new \Exception('Credenciais inválidas ou acesso negado.');
+            throw new \Exception('Failed to authenticate with Keycloak. Status: ' . $response->status() . ' - ' . $response->body());
         }
 
         $tokens = $response->json();
@@ -92,50 +90,25 @@ class KeycloakAuthService
         $payload = json_decode(base64_decode(strtr($tokenParts[1], '-_', '+/')), true);
 
         $user = $this->createOrUpdateUserFromData([
-            'email' => $payload['email'] ?? '',
-            'name' => $payload['name'] ?? $payload['preferred_username'] ?? $username,
+            'username' => $payload['preferred_username'] ?? $username,
+            'email' => $payload['email'],
+            'first_name' => $payload['given_name'] ?? 'User',
+            'last_name' => $payload['family_name'] ?? '',
+            'keycloak_id' => $payload['sub'] ?? null,
         ]);
 
-        $keycloakRoles = $payload['realm_access']['roles'] ?? [];
-        $this->syncUserRolesFromArray($user, $keycloakRoles);
+        $this->syncUserRolesFromArray(
+            $user,
+            $payload['realm_access']['roles'] ?? []
+        );
 
         return $tokens;
     }
 
-    /**
-     * Criar ou atualizar usuário baseado em dados
-     *
-     * @param  array  $userData
-     * @return \App\Models\User
-     */
-    private function createOrUpdateUserFromData(array $userData): User
-    {
-        return User::updateOrCreate(
-            ['email' => $userData['email']],
-            [
-                'name' => $userData['name'],
-                'password' => bcrypt(str()->random(16)),
-            ]
-        );
-    }
+
 
     /**
-     * Sincronizar roles do usuário baseado em um array de roles
-     *
-     * @param  \App\Models\User  $user
-     * @param  array  $keycloakRoles
-     * @return void
-     */
-    private function syncUserRolesFromArray(User $user, array $keycloakRoles): void
-    {
-        $availableRoles = Role::pluck('name')->toArray();
-        $rolesToSync = array_intersect($keycloakRoles, $availableRoles);
-
-        $user->syncRoles($rolesToSync);
-    }
-
-    /**
-     * Armazenar tokens na sessão
+     * Store tokens in the session
      *
      * @param  \Laravel\Socialite\Contracts\User  $socialiteUser
      * @return void

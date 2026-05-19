@@ -1,20 +1,29 @@
 export type User = {
     id: number;
-    name: string;
+    first_name: string;
+    last_name: string;
+    full_name: string;
     email: string;
-    avatar?: string;
-    email_verified_at: string | null;
+    username: string;
+    role: Role;
+    enabled: boolean;
+    keycloak_id?: string;
     created_at: string;
     updated_at: string;
-    [key: string]: unknown;
 };
 
 export type Auth = {
     user: User;
 };
 
-export type TwoFactorConfigContent = {
-    title: string;
-    description: string;
-    buttonText: string;
-};
+export type Role = 'admin' | 'agente' | 'user'
+
+export interface CreateUserDTO {
+    first_name: string
+    last_name: string
+    email: string
+    username: string
+    role: Role
+}
+
+export type UpdateUserDTO = CreateUserDTO

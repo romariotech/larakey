@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { LogOut, Settings } from 'lucide-vue-next';
+import { logout } from '@/actions/App/Http/Controllers/AuthController';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -9,7 +10,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
 import type { User } from '@/types';
-import { logout } from '@/actions/App/Http/Controllers/AuthController';
 
 type Props = {
     user: User;

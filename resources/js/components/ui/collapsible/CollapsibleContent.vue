@@ -13,3 +13,35 @@ const props = defineProps<CollapsibleContentProps>()
     <slot />
   </CollapsibleContent>
 </template>
+
+<style scoped>
+[data-slot="collapsible-content"] {
+  overflow: hidden;
+
+  &[data-state="open"]{
+    animation: slideDown 300ms ease-out;
+  }
+
+  &[data-state="closed"] {
+    animation: slideUp 300ms ease-out;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--reka-collapsible-content-height);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    height: var(--reka-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+</style>

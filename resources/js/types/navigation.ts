@@ -12,3 +12,11 @@ export type NavItem = {
     icon?: LucideIcon;
     isActive?: boolean;
 };
+
+export type NavGroup = {
+    title: string;
+    isActive?: boolean;
+    href: NonNullable<InertiaLinkProps['href']>;
+    icon?: LucideIcon;
+    items: NavItem[];
+};

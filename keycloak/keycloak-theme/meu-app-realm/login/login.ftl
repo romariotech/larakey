@@ -39,7 +39,6 @@
   <body class="h-screen flex items-center justify-center font-sans p-4 lg:p-8 relative overflow-hidden">
     <div class="w-full max-w-[980px] login-card rounded-md overflow-hidden">
       <div class="flex flex-col lg:flex-row h-full min-h-[580px]">
-        <!-- LEFT -->
         <div class="hidden lg:flex lg:w-[44%] bg-[#111827] relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-br from-[#111827] via-[#1f2937] to-[#0f172a]">
           </div>
@@ -52,7 +51,6 @@
           alt="Background"
           class="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-screen" />
           <div class="relative z-10 flex flex-col justify-between p-8 text-white w-full">
-            <!-- Logo -->
             <div class="flex items-center gap-3">
               <div class="bg-white/10 backdrop-blur-md border border-white/10 text-white p-2 rounded-md">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +71,6 @@
                 </p>
               </div>
             </div>
-            <!-- Center -->
             <div>
               <span class="inline-flex items-center px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-xs text-slate-200 mb-3">
                 Secure Authentication
@@ -85,7 +82,6 @@
                 Gerencie autenticação, sessões e acesso de usuários em um ambiente moderno e seguro.
               </p>
             </div>
-            <!-- Footer -->
             <div class="bg-white/5 backdrop-blur-xl border border-white/10 p-5 rounded-md shadow-2xl">
               <p class="text-slate-200 font-light text-sm leading-relaxed">
                 “Uma experiência moderna de autenticação construída com Keycloak, Tailwind CSS e FreeMarker.”
@@ -101,10 +97,8 @@
             </div>
           </div>
         </div>
-        <!-- RIGHT -->
         <div class="flex-1 bg-white flex items-center justify-center p-6 sm:p-8 lg:p-10">
           <div class="w-full max-w-sm">
-            <!-- Mobile Logo -->
             <div class="flex lg:hidden items-center gap-2 mb-8">
               <div class="bg-[#111827] text-white p-3 rounded-md shadow-lg shadow-slate-900/10">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,7 +119,6 @@
                 </p>
               </div>
             </div>
-            <!-- Header -->
             <div class="mb-6">
               <h1 class="text-3xl font-bold text-slate-900 tracking-tight mb-3">
                 Bem-vindo!
@@ -134,7 +127,6 @@
                 Entre com suas credenciais para acessar sua conta.
               </p>
             </div>
-            <!-- Alerts -->
             <#if message?has_content && (message.type != 'warning' || !isAppInitiatedAction??)>
               <div class="mb-5 px-4 py-3 rounded-md border text-sm font-medium tracking-wide
               ${((message.type = 'error')?then(
@@ -144,12 +136,10 @@
                 ${kcSanitize(message.summary)?no_esc}
               </div>
             </#if>
-            <!-- FORM -->
             <form
             action="${url.loginAction}"
             method="post"
             class="space-y-4">
-              <!-- Email -->
               <div>
                 <label
                 for="username"
@@ -166,7 +156,6 @@
                 placeholder="seu@email.com"
                 class="w-full bg-white border border-slate-200 rounded-md px-4 py-3 text-slate-900 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-[#111827]/5 focus:border-[#111827] placeholder:text-slate-400" />
               </div>
-              <!-- Password -->
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <label
@@ -174,11 +163,13 @@
                   class="block text-sm font-medium text-slate-700">
                     Senha
                   </label>
-                  <a
-                  href="#"
-                  class="text-xs font-medium text-slate-500 hover:text-[#111827] transition-colors">
-                    Esqueceu a senha?
-                  </a>
+                  <#if realm.resetPasswordAllowed>
+                    <a
+                        href="${url.loginResetCredentialsUrl}"
+                        class="text-xs font-medium text-slate-500 hover:text-[#111827] transition-colors">
+                      Esqueceu a senha?
+                    </a>
+                  </#if>
                 </div>
                 <div class="relative">
                   <input

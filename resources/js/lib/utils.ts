@@ -1,4 +1,5 @@
 import type { InertiaLinkProps } from '@inertiajs/vue3';
+import { formatDate as vueDateFormat } from '@vueuse/core';
 import { clsx } from 'clsx';
 import type { ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -9,4 +10,8 @@ export function cn(...inputs: ClassValue[]) {
 
 export function toUrl(href: NonNullable<InertiaLinkProps['href']>) {
     return typeof href === 'string' ? href : href?.url;
+}
+
+export function formatDate(date: string, formatString: string) {
+    return vueDateFormat(new Date(date), formatString);
 }

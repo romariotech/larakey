@@ -1,12 +1,47 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { AlertCircle } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { redirect } from '@/actions/App/Http/Controllers/AuthController';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+const errorList = computed<string[]>(() => {
+    const errors = usePage().props.errors as
+        | Record<string, string | string[]>
+        | string
+        | string[]
+        | undefined;
+
+    if (!errors) {
+        return [];
+    }
+
+    if (typeof errors === 'string') {
+        return [errors];
+    }
+
+    if (Array.isArray(errors)) {
+        return errors;
+    }
+
+    return Object.values(errors).flatMap((error) =>
+        Array.isArray(error) ? error : [error],
+    );
+});
+
+const hasErrors = computed(() => errorList.value.length > 0);
 </script>
 
 <template>
     <Head title="Welcome">
-        <link rel="preconnect" href="https://rsms.me/" />
-        <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+        <link
+            rel="preconnect"
+            href="https://rsms.me/"
+        />
+        <link
+            rel="stylesheet"
+            href="https://rsms.me/inter/inter.css"
+        />
     </Head>
     <div
         class="relative flex min-h-screen flex-col items-center overflow-hidden p-6 font-sans lg:justify-center lg:p-8"
@@ -62,7 +97,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                     <Link
                         v-if="$page.props.auth.user"
                         :href="redirect()"
-                        class="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-indigo-600 to-indigo-700 px-5 py-1.5 text-sm font-medium text-white transition-all duration-200 hover:from-indigo-700 hover:to-indigo-800"
+                        class="inline-flex items-center gap-2 rounded-md bg-linear-to-r from-indigo-600 to-indigo-700 px-5 py-1.5 text-sm font-medium text-white transition-all duration-200 hover:from-indigo-700 hover:to-indigo-800"
                     >
                         Dashboard
                     </Link>
@@ -89,6 +124,35 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                     class="absolute -right-40 -bottom-20 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl"
                 ></div>
 
+                <Alert
+                    v-if="hasErrors"
+                    variant="destructive"
+                    class="animate-in duration-300 fade-in"
+                >
+                    <AlertCircle class="h-4 w-4" />
+                    <AlertTitle class="font-semibold">
+                        Atenção! Verifique os campos abaixo:
+                    </AlertTitle>
+                    <AlertDescription>
+                        <span
+                            v-if="errorList.length === 1"
+                            class="mt-1 block text-sm opacity-90"
+                        >
+                            {{ errorList[0] }}
+                        </span>
+                        <ul
+                            v-else
+                            class="mt-2 list-disc space-y-1 pl-4 text-sm opacity-90"
+                        >
+                            <li
+                                v-for="(error, index) in errorList"
+                                :key="index"
+                            >
+                                {{ error }}
+                            </li>
+                        </ul>
+                    </AlertDescription>
+                </Alert>
                 <div
                     class="relative grid items-center gap-8 lg:grid-cols-2 lg:gap-12"
                 >
@@ -120,7 +184,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                         <!-- Features -->
                         <div class="mt-8 space-y-2">
                             <div class="flex items-start gap-4">
-                                <div class="mt-1 flex-shrink-0">
+                                <div class="mt-1 shrink-0">
                                     <div
                                         class="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-600 text-white"
                                     >
@@ -152,7 +216,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                                 </div>
                             </div>
                             <div class="flex items-start gap-4">
-                                <div class="mt-1 flex-shrink-0">
+                                <div class="mt-1 shrink-0">
                                     <div
                                         class="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-600 text-white"
                                     >
@@ -184,7 +248,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                                 </div>
                             </div>
                             <div class="flex items-start gap-4">
-                                <div class="mt-1 flex-shrink-0">
+                                <div class="mt-1 shrink-0">
                                     <div
                                         class="flex h-6 w-6 items-center justify-center rounded-md bg-indigo-600 text-white"
                                     >
@@ -222,7 +286,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                         <div class="relative w-full max-w-sm">
                             <!-- Card background glow -->
                             <div
-                                class="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-100 to-cyan-100 opacity-30 blur-2xl"
+                                class="absolute inset-0 rounded-2xl bg-linear-to-br from-indigo-100 to-cyan-100 opacity-30 blur-2xl"
                             ></div>
 
                             <!-- Main card -->
@@ -230,7 +294,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                                 class="relative space-y-6 rounded-2xl border border-white/50 bg-white p-8 shadow-2xl backdrop-blur-xl"
                             >
                                 <div
-                                    class="mx-auto flex h-20 w-20 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700"
+                                    class="mx-auto flex h-20 w-20 items-center justify-center rounded-xl bg-linear-to-br from-indigo-600 to-indigo-700"
                                 >
                                     <svg
                                         class="h-10 w-10 text-white"
@@ -263,7 +327,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                                     <div
                                         class="flex items-center gap-3 rounded-lg bg-indigo-50 p-3"
                                     >
-                                        <div class="flex-shrink-0">
+                                        <div class="shrink-0">
                                             <svg
                                                 class="h-5 w-5 text-indigo-600"
                                                 fill="none"
@@ -287,7 +351,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                                     <div
                                         class="flex items-center gap-3 rounded-lg bg-cyan-50 p-3"
                                     >
-                                        <div class="flex-shrink-0">
+                                        <div class="shrink-0">
                                             <svg
                                                 class="h-5 w-5 text-cyan-600"
                                                 fill="none"
@@ -311,7 +375,7 @@ import { redirect } from '@/actions/App/Http/Controllers/AuthController';
                                     <div
                                         class="flex items-center gap-3 rounded-lg bg-slate-50 p-3"
                                     >
-                                        <div class="flex-shrink-0">
+                                        <div class="shrink-0">
                                             <svg
                                                 class="h-5 w-5 text-slate-600"
                                                 fill="none"

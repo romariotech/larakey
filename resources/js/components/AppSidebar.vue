@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-vue-next';
+import {
+    BookOpen,
+    FolderGit2,
+    Layers3,
+    LayoutGrid
+} from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,13 +20,29 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { index } from '@/routes/users';
+import type { NavGroup, NavItem } from '@/types';
+import NavCollapsible from './NavCollapsible.vue';
 
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+    },
+];
+
+const mainNavGroups: NavGroup[] = [
+    {
+        title: 'Registration',
+        href: 'users',
+        icon: Layers3,
+        items: [
+            {
+                title: 'Users',
+                href: index(),
+            },
+        ],
     },
 ];
 
@@ -55,6 +76,7 @@ const footerNavItems: NavItem[] = [
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <NavCollapsible :items="mainNavGroups" />
         </SidebarContent>
 
         <SidebarFooter>

@@ -2,34 +2,78 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
+use App\Enums\RoleEnum;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Appends;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+#[Fillable([
+    'username',
+    'first_name',
+    'last_name',
+    'email',
+    'password',
+    'keycloak_id',
+    'role',
+    'enabled',
+])]
+
+#[Hidden([
+    'password',
+    'remember_token',
+])]
+
+#[Appends([
+    'full_name',
+])]
+
+/**
+ * @property int $id
+ * @property string $username
+ * @property string $first_name
+ * @property string $last_name
+ * @property string $full_name
+ * @property string $email
+ * @property string|null $keycloak_id
+ * @property RoleEnum $role
+ * @property bool $enabled
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasFactory;
+    use Notifiable;
+    use HasApiTokens;
+    use HasRoles;
+    use SoftDeletes;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Attribute casting.
      */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'two_factor_confirmed_at' => 'datetime',
+            'role' => RoleEnum::class,
+            'enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * User full name.
+     */
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string => trim(
+                "{$this->first_name} {$this->last_name}"
+            ),
+        );
     }
 }
