@@ -21,44 +21,48 @@
 ## 🛠️ Stack Tecnológico
 
 ### Backend
-| Tecnologia | Versão | Propósito |
-|-----------|--------|----------|
-| **Laravel** | 13.x | Framework web + ORM (Eloquent) |
-| **PHP** | 8.3+ | Linguagem do servidor |
-| **PostgreSQL** | 14+ | Banco de dados principal |
-| **Keycloak** | 26 | Identity Provider (OAuth 2.0 + OIDC) |
-| **Laravel Socialite** | Latest | Provider OAuth para Keycloak |
-| **Laravel Keycloak Guard** | robsontenorio/* | Guard authentication customizado |
-| **Spatie Permission** | Latest | RBAC (Role-Based Access Control) |
+
+| Tecnologia                 | Versão           | Propósito                            |
+| -------------------------- | ---------------- | ------------------------------------ |
+| **Laravel**                | 13.x             | Framework web + ORM (Eloquent)       |
+| **PHP**                    | 8.3+             | Linguagem do servidor                |
+| **PostgreSQL**             | 14+              | Banco de dados principal             |
+| **Keycloak**               | 26               | Identity Provider (OAuth 2.0 + OIDC) |
+| **Laravel Socialite**      | Latest           | Provider OAuth para Keycloak         |
+| **Laravel Keycloak Guard** | robsontenorio/\* | Guard authentication customizado     |
+| **Spatie Permission**      | Latest           | RBAC (Role-Based Access Control)     |
 
 ### Frontend
-| Tecnologia | Versão | Propósito |
-|-----------|--------|----------|
-| **Vue.js** | 3.x | Framework reativo |
-| **TypeScript** | 5.x | Tipagem estática |
-| **Inertia.js** | Latest | SSR bridge (Server-side rendering) |
-| **shadcn-vue** | Latest | Componentes UI reutilizáveis |
-| **Tailwind CSS** | 4.x | Utility-first styling |
-| **Vite** | Latest | Build tool moderno |
+
+| Tecnologia       | Versão | Propósito                          |
+| ---------------- | ------ | ---------------------------------- |
+| **Vue.js**       | 3.x    | Framework reativo                  |
+| **TypeScript**   | 5.x    | Tipagem estática                   |
+| **Inertia.js**   | Latest | SSR bridge (Server-side rendering) |
+| **shadcn-vue**   | Latest | Componentes UI reutilizáveis       |
+| **Tailwind CSS** | 4.x    | Utility-first styling              |
+| **Vite**         | Latest | Build tool moderno                 |
 
 ### Infraestrutura
-| Componente | Versão | Propósito |
-|-----------|--------|----------|
-| **Podman** | Latest | Container runtime |
-| **Docker Compose** | Latest | Orquestração de serviços |
-| **Nginx** | 1.25+ | Reverse proxy + Web server |
-| **PHP-FPM** | 8.3+ | FastCGI process manager |
-| **PostgreSQL** | 14+ | Database principal + Cache tables |
+
+| Componente         | Versão | Propósito                         |
+| ------------------ | ------ | --------------------------------- |
+| **Podman**         | Latest | Container runtime                 |
+| **Docker Compose** | Latest | Orquestração de serviços          |
+| **Nginx**          | 1.25+  | Reverse proxy + Web server        |
+| **PHP-FPM**        | 8.3+   | FastCGI process manager           |
+| **PostgreSQL**     | 14+    | Database principal + Cache tables |
 
 ### DevOps & Testing
-| Ferramenta | Versão | Propósito |
-|-----------|--------|----------|
-| **PestPHP** | Latest | Testing framework |
-| **PHPUnit** | Latest | Unit testing |
-| **ESLint** | Latest | Linting JavaScript/TypeScript |
-| **Pint** | Latest | Code formatter PHP |
-| **Composer** | Latest | Gerenciador de pacotes PHP |
-| **pnpm** | Latest | Gerenciador de pacotes Node |
+
+| Ferramenta   | Versão | Propósito                     |
+| ------------ | ------ | ----------------------------- |
+| **PestPHP**  | Latest | Testing framework             |
+| **PHPUnit**  | Latest | Unit testing                  |
+| **ESLint**   | Latest | Linting JavaScript/TypeScript |
+| **Pint**     | Latest | Code formatter PHP            |
+| **Composer** | Latest | Gerenciador de pacotes PHP    |
+| **pnpm**     | Latest | Gerenciador de pacotes Node   |
 
 ---
 
@@ -82,7 +86,7 @@ sequenceDiagram
     Keycloak->>App: 5. Authorization Code
     App->>Keycloak: 6. Exchange Code → Tokens (client_secret)
     Keycloak->>App: 7. JWT {access_token, id_token, refresh_token}
-    
+
     rect rgb(200, 150, 255)
     Note over App,DB: Sincronização Local
     App->>App: 8. Decodificar JWT (RS256)
@@ -90,7 +94,7 @@ sequenceDiagram
     App->>Spatie: 10. Sync Roles (1 role por usuário)
     DB->>Spatie: 11. Atribuir Permissions
     end
-    
+
     App->>App: 12. Auth::login($user)
     App->>User: 13. Session Cookie + Redirect /dashboard
 
@@ -105,9 +109,8 @@ sequenceDiagram
 
 **Protocolo:** OAuth 2.0 + OpenID Connect  
 **Algorithm:** RS256 (RSA-2048 assimétrico)  
-**Token TTL:** Configurável (padrão 300s)  
+**Token TTL:** Configurável (padrão 300s)
 
-```
 ```mermaid
 flowchart TD
     A["👤 Usuário clica em Login com Keycloak"] --> B["🌐 Laravel redireciona para Keycloak Auth Endpoint"]
@@ -118,9 +121,9 @@ flowchart TD
     F --> G["🛡️ Backend valida JWT com public_key"]
     G --> H["💾 Próxima camada: sincronização local"]
 ```
-```
 
 **Código Implementado:**
+
 ```php
 // routes/web.php
 Route::get('/login/keycloak', [AuthController::class, 'redirect'])
@@ -150,7 +153,7 @@ public function callback()
 ### 2️⃣ Camada 2: Socialite + Guard Customizado
 
 **Propósito:** Abstrair complexidade OAuth, converter JWT em User model  
-**Guard:** `robsontenorio/laravel-keycloak-guard`  
+**Guard:** `robsontenorio/laravel-keycloak-guard`
 
 ```php
 // config/auth.php
@@ -176,6 +179,7 @@ public function callback()
 ```
 
 **Fluxo Interno:**
+
 ```
 Socialite::driver('keycloak')->user()
     ↓
@@ -188,9 +192,8 @@ Socialite::driver('keycloak')->user()
 
 ### 3️⃣ Camada 3: Sincronização Bidirecional (Keycloak ↔ DB)
 
-**Garantia:** Fonte única de verdade em Keycloak, cache local em DB  
+**Garantia:** Fonte única de verdade em Keycloak, cache local em DB
 
-```
 ```mermaid
 flowchart TD
     A["JWT Claims recebidas"] --> B["KeycloakCommonTrait::createOrUpdateUserFromData()"]
@@ -198,9 +201,9 @@ flowchart TD
     C --> D["Sincroniza usuário local"]
     D --> E["Atualiza username, nome, email e keycloak_id"]
 ```
-```
 
 **Modelo Local:**
+
 ```php
 // app/Models/User.php
 #[Fillable(['username', 'email', 'first_name', 'last_name', 'password', 'keycloak_id', 'role', 'enabled'])]
@@ -210,7 +213,7 @@ flowchart TD
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, SoftDeletes;
-    
+
     protected function fullName(): Attribute
     {
         return Attribute::make(
@@ -223,7 +226,7 @@ class User extends Authenticatable
 ### 4️⃣ Camada 4: Autorização (Spatie RBAC)
 
 **Padrão:** Role-Based Access Control com Permissions granulares  
-**1 Usuário = 1 Role** (regra de negócio)  
+**1 Usuário = 1 Role** (regra de negócio)
 
 ```mermaid
 flowchart TD
@@ -237,6 +240,7 @@ flowchart TD
 ```
 
 **Permissões por Role:**
+
 ```
 admin
   ├─ view_dashboard ✅
@@ -257,6 +261,7 @@ user
 ```
 
 **Middleware em Rotas:**
+
 ```php
 // routes/web.php
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -269,7 +274,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 ### 5️⃣ Camada 5: Token Refresh Automático
 
 **Propósito:** Manter sessão ativa sem re-autenticação  
-**Middleware:** `InjectKeycloakToken`  
+**Middleware:** `InjectKeycloakToken`
 
 ```mermaid
 sequenceDiagram
@@ -292,6 +297,7 @@ sequenceDiagram
 ```
 
 **Código:**
+
 ```php
 // app/Http/Middleware/InjectKeycloakToken.php
 public function handle(Request $request, Closure $next): Response
@@ -329,7 +335,7 @@ public function handle(Request $request, Closure $next): Response
 
 ### 6️⃣ Camada 6: Injeção de Autorização em Props (Inertia)
 
-**Propósito:** Frontend conhece roles/permissions sem requisições adicionais  
+**Propósito:** Frontend conhece roles/permissions sem requisições adicionais
 
 ```php
 // app/Http/Middleware/HandleInertiaRequests.php
@@ -349,21 +355,25 @@ public function share(Request $request): array
 ```
 
 **Frontend Vue.js:**
+
 ```vue
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3'
+import { usePage } from '@inertiajs/vue3';
 
-const { auth } = usePage().props
+const { auth } = usePage().props;
 
-const canManageUsers = computed(() => 
-  auth.permissions.includes('manage_users')
-)
+const canManageUsers = computed(() =>
+    auth.permissions.includes('manage_users'),
+);
 </script>
 
 <template>
-  <button v-if="canManageUsers" @click="openUserPanel">
-    Gerenciar Usuários
-  </button>
+    <button
+        v-if="canManageUsers"
+        @click="openUserPanel"
+    >
+        Gerenciar Usuários
+    </button>
 </template>
 ```
 
@@ -444,6 +454,7 @@ class StoreUserRequest extends FormRequest
 ```
 
 **Padrão:**
+
 - ✅ Validação automática em todos os Controllers
 - ✅ PHPDoc para IDE autocomplete
 - ✅ `Rule::enum()` garante tipagem ao invés de `Rule::in(['admin', ...])`
@@ -498,15 +509,15 @@ class UserController
 return DB::transaction(function () {
     // 1. Criar user no BD
     $user = User::create($data);
-    
+
     // 2. Criar user no Keycloak
     $this->keycloakUserService->create($user);
-    
+
     // Se KeycloakUserService lançar exception:
     // - User::create() é revertido
     // - Exception propagada
     // - Nenhum órfão no sistema
-    
+
     return $user;
 });
 ```
@@ -560,21 +571,21 @@ $user->only([
 
 ```vue
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { User } from '@/types/models'
+import { ref, computed } from 'vue';
+import type { User } from '@/types/models';
 
 interface Props {
-  user: User
-  isLoading: boolean
+    user: User;
+    isLoading: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isLoading: false,
-})
+    isLoading: false,
+});
 
-const fullName = computed<string>(() => 
-  `${props.user.firstName} ${props.user.lastName}`
-)
+const fullName = computed<string>(
+    () => `${props.user.firstName} ${props.user.lastName}`,
+);
 </script>
 ```
 
@@ -585,17 +596,24 @@ const fullName = computed<string>(() =>
 ```vue
 <!-- ✅ Componente reutilizável, isolado, testável -->
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 </script>
 
 <template>
-  <form @submit.prevent="onSubmit">
-    <Input v-model="form.email" type="email" placeholder="Email" />
-    <Button type="submit" :disabled="form.processing">
-      {{ form.processing ? 'Enviando...' : 'Enviar' }}
-    </Button>
-  </form>
+    <form @submit.prevent="onSubmit">
+        <Input
+            v-model="form.email"
+            type="email"
+            placeholder="Email"
+        />
+        <Button
+            type="submit"
+            :disabled="form.processing"
+        >
+            {{ form.processing ? 'Enviando...' : 'Enviar' }}
+        </Button>
+    </form>
 </template>
 ```
 
@@ -612,13 +630,13 @@ graph TD
     C -->|HandleInertiaRequests| D["🛡️ Middleware"]
     D -->|share props| E["💾 Props"]
     E -->|JSON + HTML| A
-    
+
     A -->|XHR/Fetch| F["API Route"]
     F -->|Controller| G["Service Layer"]
     G -->|Eloquent| H["📊 Database"]
     H -->|Collection| F
     F -->|JSON| A
-    
+
     style A fill:#e1f5ff
     style B fill:#fff3e0
     style C fill:#f3e5f5
@@ -638,7 +656,7 @@ graph TD
    ↓
 3. UserController::index()
    └─ return Inertia::render('user/Index')
-   
+
 4. HandleInertiaRequests Middleware
    └─ share([
        'auth' => [
@@ -647,7 +665,7 @@ graph TD
          'permissions' => $user->getAllPermissions()->pluck('name')
        ]
      ])
-   
+
 5. Inertia prepara payload:
    {
      component: 'user/Index',
@@ -657,18 +675,18 @@ graph TD
      },
      url: '/users'
    }
-   
+
 6. Retorna HTML + JavaScript inicializado
    └─ Monta Vue app com props
 
 7. Frontend inicializado, usa Inertia Link para navegação
    └─ GET /api/users?page=1&search=...
-   
+
 8. UserController::list()
    └─ return response()->json(
        $this->userService->getPaginated(...)
      )
-     
+
 9. Response: {data: [...], total: 100, per_page: 15}
 
 10. Vue reactivo re-renderiza com dados
@@ -686,7 +704,7 @@ Frontend (Vue 3 + Inertia):
 └────────────────────────────────┘
         ↓
         POST /api/users {email, username, ...}
-        
+
 Backend (Laravel):
 ┌────────────────────────────────┐
 │ Route::post('/users', ...)      │
@@ -703,7 +721,7 @@ Backend (Laravel):
 └────────────────────────────────┘
         ↓
         Response: 201 {message, user}
-        
+
 Frontend:
 ┌────────────────────────────────┐
 │ form.post('/api/users')         │
@@ -779,6 +797,7 @@ Realms → larakey-realm → Keys → RS256 (Active)
 ```
 
 **Formato correto (.env):**
+
 ```bash
 KEYCLOAK_REALM_PUBLIC_KEY="-----BEGIN CERTIFICATE-----
 MIICnTCCAYUCBgF5xKR1lTANBgkqhkiG9w0BAQsFADASMRAwDgYDVQQDDAdsYXJh
@@ -866,6 +885,7 @@ Clients → larakey → Service Accounts Roles
 ```
 
 Isso permite que a aplicação:
+
 - ✅ Criar usuários em Keycloak
 - ✅ Atualizar usuários em Keycloak
 - ✅ Deletar usuários em Keycloak
@@ -971,13 +991,13 @@ php artisan config:publish
 
 ```bash
 # Instalar pacotes Node
-pnpm install
+npm install
 
 # Build assets (Vite)
-pnpm run build
+npm run build
 
 # ou development com HMR
-pnpm run dev
+npm run dev
 ```
 
 #### 4️⃣ Configurar Variáveis de Ambiente
@@ -991,6 +1011,7 @@ nano .env
 ```
 
 **Valores Essenciais:**
+
 ```bash
 APP_NAME=Larakey
 APP_KEY=base64:xxxxx  # gerado em Step 2
@@ -1040,10 +1061,10 @@ php artisan db:seed --class=RolesAndPermissionsSeeder
 
 ```bash
 # Development
-pnpm run dev
+npm run dev
 
 # Production
-pnpm run build
+npm run build
 ```
 
 #### 8️⃣ Acessar Aplicação
@@ -1089,13 +1110,13 @@ pnpm run build
 
 ### 🛠️ Troubleshooting
 
-| Problema | Solução |
-|----------|---------|
-| **Token inválido/expirado** | Verificar `KEYCLOAK_REALM_PUBLIC_KEY` e sincronizar NTP |
-| **Redirect loop** | Validar `KEYCLOAK_REDIRECT_URI` em ambos Keycloak e `.env` |
-| **User não sincronizado** | Verificar `KEYCLOAK_LOAD_USER_FROM_DATABASE=true` |
-| **Permission denied** | Validar roles atribuído a usuário em Keycloak |
-| **CORS error** | Adicionar origem em Keycloak Client → Web origins |
+| Problema                    | Solução                                                    |
+| --------------------------- | ---------------------------------------------------------- |
+| **Token inválido/expirado** | Verificar `KEYCLOAK_REALM_PUBLIC_KEY` e sincronizar NTP    |
+| **Redirect loop**           | Validar `KEYCLOAK_REDIRECT_URI` em ambos Keycloak e `.env` |
+| **User não sincronizado**   | Verificar `KEYCLOAK_LOAD_USER_FROM_DATABASE=true`          |
+| **Permission denied**       | Validar roles atribuído a usuário em Keycloak              |
+| **CORS error**              | Adicionar origem em Keycloak Client → Web origins          |
 
 ---
 
@@ -1150,16 +1171,6 @@ pnpm run build
 - [Spatie Permission Docs](https://spatie.be/docs/laravel-permission)
 - [Inertia.js Docs](https://inertiajs.com)
 - [OAuth 2.0 RFC 6749](https://tools.ietf.org/html/rfc6749)
-
----
-
-## 🤝 Contribuindo
-
-1. Fork o repositório
-2. Criar branch feature (`git checkout -b feature/amazing-feature`)
-3. Commit mudanças (`git commit -m 'Add amazing feature'`)
-4. Push para branch (`git push origin feature/amazing-feature`)
-5. Abrir Pull Request
 
 ---
 
