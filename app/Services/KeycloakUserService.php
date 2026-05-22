@@ -2,84 +2,74 @@
 
 namespace App\Services;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
+use App\Traits\KeycloakCommonTrait;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-class KeycloakUserService extends KeycloakCommonService
+class KeycloakUserService
 {
+    use KeycloakCommonTrait;
+
+    private const CACHE_TTL_7_DAYS = 60 * 60 * 24 * 7;
+
     /**
      * Create a new user in the database and in Keycloak
      *
-     * @param  array  $data
-     * @return string|null Retorna o ID do usuário criado no Keycloak
+     * @param  User  $user
+     * @return void
      * @throws \Exception
      */
-    public function createKeycloakUser(array $data): ?string
+    public function create(User $user): void
     {
-        $tempPassword = $data['password'] ?? Str::random(16);
-
         $response = $this->makeAdminRequest('POST', '/users', [
-            'email' => $data['email'],
-            'username' => $data['username'],
-            'firstName' => $data['first_name'],
-            'lastName' => $data['last_name'],
-            'enabled' => (bool) ($data['enabled'] ?? false),
+            'email' => $user->email,
+            'username' => $user->username,
+            'firstName' => $user->first_name,
+            'lastName' => $user->last_name,
+            'enabled' => $user->enabled,
             'emailVerified' => false,
             'requiredActions' => ['VERIFY_EMAIL'],
             'credentials' => [
                 [
                     'type' => 'password',
-                    'value' => $tempPassword,
+                    'value' => Str::random(16),
                     'temporary' => true,
                 ],
             ],
         ]);
 
+        $keycloakUserId = null;
+
         if ($response->successful() || $response->status() === 201) {
             $location = $response->header('Location');
             if ($location) {
-                return basename($location);
+                $keycloakUserId = basename($location);
             }
         }
 
-        if ($response->status() === 409) {
-            throw new \Exception('This email already exists in Keycloak.');
-        }
-
-        throw new \Exception('Failed to create user in Keycloak: ' . $response->body());
-    }
-
-    /**
-     * Create a new user in the database and in Keycloak
-     *
-     * @param  array  $data
-     * @return User
-     * @throws \Exception
-     */
-    public function createUser(array $data): User
-    {
-        $keycloakUserId = $this->createKeycloakUser($data);
-
         try {
+            if ($response->status() === 409) {
+                throw new \Exception('This email already exists in Keycloak.');
+            }
 
-            $user = User::create([
-                'username' => $data['username'],
-                'email' => $data['email'],
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'password' => bcrypt(Str::random(16)),
-                'keycloak_id' => $keycloakUserId,
-                'role' => 'user',
-                'enabled' => (bool) ($data['enabled'] ?? false),
-            ]);
+            throw_if(!$keycloakUserId, 'Failed to create user in Keycloak: ' . $response->body());
+
+            $this->assignClientRole($keycloakUserId, $user->role);
 
             $this->sendExecuteActionsEmail($keycloakUserId);
 
-            return $user;
+            $user->keycloak_id = $keycloakUserId;
+            $user->save();
 
         } catch (\Exception $e) {
 
-            $this->deleteKeycloakUser($keycloakUserId);
+            if ($keycloakUserId) {
+
+                $this->delete($keycloakUserId);
+            }
+
             throw new \Exception('Failed to save user to the local database. The Keycloak creation was rolled back. Error: ' . $e->getMessage());
         }
     }
@@ -92,13 +82,11 @@ class KeycloakUserService extends KeycloakCommonService
      * @return bool
      * @throws \Exception
      */
-    public function updateKeycloakUser(string $keycloakUserId, array $data): bool
+    public function update(string $keycloakUserId, array $data): bool
     {
         $response = $this->makeAdminRequest('PUT', "/users/{$keycloakUserId}", $data);
 
-        if (!$response->successful()) {
-            throw new \Exception('Failed to update user in Keycloak.');
-        }
+        throw_if(!$response->successful(), 'Failed to update user in Keycloak. Status: ' . $response->status() . ' - ' . $response->body());
 
         return true;
     }
@@ -110,13 +98,11 @@ class KeycloakUserService extends KeycloakCommonService
      * @return bool
      * @throws \Exception
      */
-    public function deleteKeycloakUser(string $keycloakUserId): bool
+    public function delete(string $keycloakUserId): bool
     {
         $response = $this->makeAdminRequest('DELETE', "/users/{$keycloakUserId}");
 
-        if (!$response->successful()) {
-            throw new \Exception('Failed to delete user from Keycloak.');
-        }
+        throw_if(!$response->successful(), 'Failed to delete user from Keycloak. Status: ' . $response->status() . ' - ' . $response->body());
 
         return true;
     }
@@ -137,34 +123,67 @@ class KeycloakUserService extends KeycloakCommonService
             $actions
         );
 
-        if (!$response->successful()) {
-            throw new \Exception('Failed to send execute actions email from Keycloak: ' . $response->body());
-        }
+        throw_if(!$response->successful(), 'Failed to send execute actions email from Keycloak: ' . $response->body());
 
         return true;
     }
 
     /**
-     * Assign a Realm Role to a user
+     * Get the UUID of the Keycloak client by its client_id, with caching
      *
-     * @param string $keycloakUserId
-     * @param string $roleName
-     * @return void
-     * @throws \Exception
+     * @return string
      */
-    public function assignRealmRole(string $keycloakUserId, string $roleName): void
+    protected function getClientUuid(): string
     {
-        $roleResponse = $this->makeAdminRequest('GET', "/roles/{$roleName}");
+        return Cache::remember('keycloak_client_uuid', self::CACHE_TTL_7_DAYS, function () {
 
-        if (!$roleResponse->successful()) {
-            throw new \Exception("Role '{$roleName}' not found in Keycloak.");
-        }
+            $response = $this->makeAdminRequest('GET', "/clients?clientId={$this->getClientId()}");
 
-        $roleData = $roleResponse->json();
+            throw_if(
+                !$response->successful() || empty($response->json()),
+                "Failed to retrieve client UUID from Keycloak for client_id '{$this->getClientId()}'. Status: " . $response->status() . ' - ' . $response->body()
+            );
+
+            return $response->json()[0]['id'];
+        });
+    }
+
+    /**
+     * Get the role data for a specific client role, with caching
+     * @param string $clientUuid
+     * @param string $roleName
+     * @return array
+     */
+    protected function getClientRolesData(string $clientUuid, string $roleName): array
+    {
+        return Cache::remember("keycloak_client_roles_data_{$clientUuid}_{$roleName}", self::CACHE_TTL_7_DAYS, function () use ($clientUuid, $roleName) {
+
+            $response = $this->makeAdminRequest('GET', "/clients/{$clientUuid}/roles/{$roleName}");
+
+            throw_if(
+                !$response->successful(),
+                "Failed to retrieve role data from Keycloak for client UUID '{$clientUuid}' and role '{$roleName}'. Status: " . $response->status() . ' - ' . $response->body()
+            );
+
+            return $response->json();
+        });
+    }
+
+    /**
+     * Assign a client role to a user in Keycloak
+     * @param string $keycloakUserId
+     * @param RoleEnum $role
+     * @throws \Exception
+     * @return void
+     */
+    public function assignClientRole(string $keycloakUserId, RoleEnum $role): void
+    {
+        $clientUuid = $this->getClientUuid();
+        $roleData = $this->getClientRolesData($clientUuid, $role->value);
 
         $assignResponse = $this->makeAdminRequest(
             'POST',
-            "/users/{$keycloakUserId}/role-mappings/realm",
+            "/users/{$keycloakUserId}/role-mappings/clients/{$clientUuid}",
             [
                 [
                     'id' => $roleData['id'],
@@ -173,8 +192,40 @@ class KeycloakUserService extends KeycloakCommonService
             ]
         );
 
-        if (!$assignResponse->successful()) {
-            throw new \Exception('Failed to assign role in Keycloak: ' . $assignResponse->body());
+        throw_if(!$assignResponse->successful(), 'Failed to assign role in Keycloak: ' . $assignResponse->body());
+    }
+
+    /**
+     * Sync the user's client role in Keycloak
+     *
+     * @param string $keycloakUserId
+     * @param string $roleName
+     * @return void
+     * @throws \Exception
+     */
+    public function syncClientRole(string $keycloakUserId, string $roleName): void
+    {
+        $clientUuid = $this->getClientUuid();
+
+        $currentRolesResponse = $this->makeAdminRequest(
+            'GET',
+            "/users/{$keycloakUserId}/role-mappings/clients/{$clientUuid}"
+        );
+
+        throw_if(!$currentRolesResponse->successful(), 'Failed to retrieve current roles from Keycloak: ' . $currentRolesResponse->body());
+
+        $currentRoles = $currentRolesResponse->json();
+
+        if (!empty($currentRoles)) {
+            $removeResponse = $this->makeAdminRequest(
+                'DELETE',
+                "/users/{$keycloakUserId}/role-mappings/clients/{$clientUuid}",
+                $currentRoles
+            );
+
+            throw_if(!$removeResponse->successful(), 'Failed to remove existing roles in Keycloak: ' . $removeResponse->body());
         }
+
+        $this->assignClientRole($keycloakUserId, RoleEnum::from($roleName));
     }
 }

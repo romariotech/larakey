@@ -45,7 +45,12 @@ return [
 
         'external' => [
             'driver' => 'keycloak',
-            'provider' => 'users', 
+            'provider' => 'users',
+        ],
+
+        'api' => [
+            'driver' => 'keycloak',
+            'provider' => 'users',
         ],
     ],
 

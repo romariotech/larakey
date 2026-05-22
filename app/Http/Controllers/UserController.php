@@ -6,6 +6,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Models\User;
 use App\Services\KeycloakUserService;
 use App\Services\UserService;
+use Auth;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,27 +26,17 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         try {
-            $user = $this->keycloakUserService->createUser(
-                $request->validated()
-            );
+
+            $user = $this->userService->create($request->validated());
 
             return response()->json([
                 'message' => 'Usuário cadastrado com sucesso!',
-                'user' => [
-                    'id' => $user->id,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'full_name' => $user->full_name,
-                    'email' => $user->email,
-                    'username' => $user->username,
-                    'role' => $user->role,
-                    'enabled' => $user->enabled,
-                ],
+                'user' => $user->except(['password', 'remember_token']),
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-            ], 400);
+            ], 500);
         }
     }
 
@@ -102,16 +93,15 @@ class UserController extends Controller
     public function update(StoreUserRequest $request, User $user): JsonResponse
     {
         try {
-            $user->update($request->validated());
+            $this->userService->update($user, $request->validated());
 
             return response()->json([
                 'message' => 'Usuário atualizado com sucesso!',
-                'user' => $user->except(['password', 'remember_token']),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-            ], 400);
+            ], 500);
         }
     }
 

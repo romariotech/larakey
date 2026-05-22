@@ -9,14 +9,12 @@ use Illuminate\Http\Request;
 class InvalidApiTokenException extends Exception
 {
     /**
-     * Renderiza a exceção como uma resposta HTTP.
+     * Render the exception as an HTTP response.
      */
     public function render(Request $request): JsonResponse
     {
         return response()->json([
-            'erro' => 'Não Autorizado',
-            'mensagem' => 'O seu token expirou ou é inválido. Por favor, faça login novamente.',
-            // 'status_code' => 401
+            'message' => 'Unauthorized: Invalid API token.',
         ], 401);
     }
 }

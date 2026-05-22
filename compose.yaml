@@ -29,7 +29,7 @@ services:
             - postgres
         command: start-dev
         volumes:
-            - ./keycloak/keycloak-theme:/opt/keycloak/themes
+            - ./keycloak/keycloak-theme/meu-app-realm:/opt/keycloak/themes/meu-app-realm
         ports:
             - '8080:8080' # Exposto para que o host-gateway do Laravel consiga aceder
 

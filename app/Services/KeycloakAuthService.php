@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Traits\KeycloakCommonTrait;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Laravel\Socialite\Facades\Socialite;
 
-class KeycloakAuthService extends KeycloakCommonService
+class KeycloakAuthService
 {
+    use KeycloakCommonTrait;
+
     /**
      * Get the Keycloak redirect URL for authentication
      */
@@ -41,7 +44,7 @@ class KeycloakAuthService extends KeycloakCommonService
 
         $this->syncUserRolesFromArray(
             $user,
-            $socialiteUser->user['realm_access']['roles'] ?? []
+            data_get($rawUser, "resource_access.{$this->getClientId()}.roles", [])
         );
 
         $user = $user->fresh();
@@ -59,7 +62,7 @@ class KeycloakAuthService extends KeycloakCommonService
         return $this->getKeycloakBaseUrl() . "/protocol/openid-connect/logout?" . http_build_query([
             'post_logout_redirect_uri' => url('/'),
             'id_token_hint' => $idToken,
-            'client_id' => $this->clientId,
+            'client_id' => $this->getClientId(),
         ]);
     }
 
@@ -74,16 +77,14 @@ class KeycloakAuthService extends KeycloakCommonService
     public function authenticateWithCredentials(string $username, string $password): array
     {
         $response = Http::asForm()->post($this->getKeycloakBaseUrl() . "/protocol/openid-connect/token", [
-            'client_id' => $this->clientId,
+            'client_id' => $this->getClientId(),
             'client_secret' => config('services.keycloak.client_secret'),
             'grant_type' => 'password',
             'username' => $username,
             'password' => $password,
         ]);
 
-        if (!$response->successful()) {
-            throw new \Exception('Failed to authenticate with Keycloak. Status: ' . $response->status() . ' - ' . $response->body());
-        }
+        throw_if(!$response->successful(), 'Failed to authenticate with Keycloak. Status: ' . $response->status() . ' - ' . $response->body());
 
         $tokens = $response->json();
         $tokenParts = explode('.', $tokens['access_token']);
@@ -99,13 +100,11 @@ class KeycloakAuthService extends KeycloakCommonService
 
         $this->syncUserRolesFromArray(
             $user,
-            $payload['realm_access']['roles'] ?? []
+            data_get($payload, "resource_access.{$this->getClientId()}.roles", [])
         );
 
         return $tokens;
     }
-
-
 
     /**
      * Store tokens in the session
@@ -120,5 +119,40 @@ class KeycloakAuthService extends KeycloakCommonService
             'access_token' => $socialiteUser->token ?? null,
             'refresh_token' => $socialiteUser->refreshToken ?? null,
         ]);
+    }
+
+    /**
+     * Refresh the access token using the refresh token
+     *
+     * @param  string  $refreshToken
+     * @return array|null Returns new tokens or null if refresh failed
+     * @throws \Exception
+     */
+    public function refreshAccessToken(string $refreshToken): ?array
+    {
+        $response = Http::asForm()->post($this->getKeycloakBaseUrl() . "/protocol/openid-connect/token", [
+            'client_id' => $this->getClientId(),
+            'client_secret' => config('services.keycloak.client_secret'),
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $refreshToken,
+        ]);
+
+        if (!$response->successful()) {
+
+            return null;
+        }
+
+        $tokens = $response->json();
+
+        if (session()->isStarted()) {
+
+            session([
+                'id_token' => $tokens['id_token'] ?? session('id_token'),
+                'access_token' => $tokens['access_token'],
+                'refresh_token' => $tokens['refresh_token'] ?? $refreshToken,
+            ]);
+        }
+
+        return $tokens;
     }
 }

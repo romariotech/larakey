@@ -14,10 +14,8 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Limpa o cache do Spatie
         app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        // 1. Criar as Permissões
         $permissions = [
             'view_dashboard',
             'manage_users',
@@ -31,9 +29,6 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // 2. Criar os Perfis (Roles) e Vincular Permissões
-
-        // Perfil MANAGER (Gerente)
         $managerRole = Role::firstOrCreate(['name' => 'manager']);
         $managerRole->syncPermissions([
             'view_dashboard',
@@ -42,11 +37,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_reports',
         ]);
 
-        // Perfil ADMIN (Administrador)
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $adminRole->syncPermissions(Permission::all());
 
-        // Perfil USER (Utilizador Comum)
         $userRole = Role::firstOrCreate(['name' => 'user']);
         $userRole->syncPermissions([
             'view_dashboard',

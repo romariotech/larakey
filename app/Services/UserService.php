@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Models\User;
+use DB;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 class UserService
 {
@@ -46,17 +47,6 @@ class UserService
     }
 
     /**
-     * Get all users without pagination.
-     *
-     * @param  array<string, mixed>  $columns
-     * @return Collection
-     */
-    public function getAll(array $columns = ['*']): Collection
-    {
-        return User::select($columns)->orderBy('created_at', 'desc')->get();
-    }
-
-    /**
      * Create a new user.
      *
      * @param  array<string, mixed>  $data
@@ -64,7 +54,22 @@ class UserService
      */
     public function create(array $data): User
     {
-        return User::create($data);
+        return DB::transaction(function () use ($data) {
+
+            $user = User::create([
+                'username' => $data['username'],
+                'email' => $data['email'],
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'password' => bcrypt(Str::random(16)),
+                'role' => $data['role'] ?? 'user',
+                'enabled' => (bool) ($data['enabled'] ?? false),
+            ]);
+
+            $this->keycloakUserService->create($user);
+
+            return $user;
+        });
     }
 
     /**
@@ -72,11 +77,31 @@ class UserService
      *
      * @param  User  $user
      * @param  array<string, mixed>  $data
-     * @return bool
+     * @return void
      */
-    public function update(User $user, array $data): bool
+    public function update(User $user, array $data): void
     {
-        return $user->update($data);
+        DB::transaction(function () use ($user, $data) {
+
+            $user->update($data);
+
+            $user->refresh();
+
+            $this->keycloakUserService->update($user->keycloak_id, [
+                'username' => $user->username,
+                'email' => $user->email,
+                'firstName' => $user->first_name,
+                'lastName' => $user->last_name,
+                'enabled' => $user->enabled,
+            ]);
+
+            $this->keycloakUserService->syncClientRole(
+                $user->keycloak_id,
+                $user->role->value
+            );
+
+            $user->syncRoles($user->role);
+        });
     }
 
     /**
@@ -87,128 +112,8 @@ class UserService
      */
     public function delete(User $user): ?bool
     {
-        $this->keycloakUserService->deleteKeycloakUser($user->keycloak_id);
+        $this->keycloakUserService->delete($user->keycloak_id);
 
         return $user->delete();
-    }
-
-    /**
-     * Find a user by ID.
-     *
-     * @param  int  $id
-     * @return User|null
-     */
-    public function findById(int $id): ?User
-    {
-        return User::find($id);
-    }
-
-    /**
-     * Find a user by keycloak ID.
-     *
-     * @param  string  $keycloakId
-     * @return User|null
-     */
-    public function findByKeycloakId(string $keycloakId): ?User
-    {
-        return User::where('keycloak_id', $keycloakId)->first();
-    }
-
-    /**
-     * Check if a keycloak ID exists.
-     *
-     * @param  string  $keycloakId
-     * @return bool
-     */
-    public function keycloakIdExists(string $keycloakId): bool
-    {
-        return User::where('keycloak_id', $keycloakId)->exists();
-    }
-
-    /**
-     * Check if a user exists by email.
-     *
-     * @param  string  $email
-     * @param  int|null  $excludeId
-     * @return bool
-     */
-    public function emailExists(string $email, ?int $excludeId = null): bool
-    {
-        $query = User::where('email', $email);
-
-        if ($excludeId !== null) {
-            $query->where('id', '!=', $excludeId);
-        }
-
-        return $query->exists();
-    }
-
-    /**
-     * Assign a role to a user.
-     *
-     * @param  User  $user
-     * @param  string|array<string>  $role
-     * @return void
-     */
-    public function assignRole(User $user, $role): void
-    {
-        $user->assignRole($role);
-    }
-
-    /**
-     * Sync roles for a user.
-     *
-     * @param  User  $user
-     * @param  array<string>  $roles
-     * @return void
-     */
-    public function syncRoles(User $user, array $roles): void
-    {
-        $user->syncRoles($roles);
-    }
-
-    /**
-     * Remove a role from a user.
-     *
-     * @param  User  $user
-     * @param  string  $role
-     * @return void
-     */
-    public function removeRole(User $user, string $role): void
-    {
-        $user->removeRole($role);
-    }
-
-    /**
-     * Check if user has a specific permission.
-     *
-     * @param  User  $user
-     * @param  string  $permission
-     * @return bool
-     */
-    public function hasPermission(User $user, string $permission): bool
-    {
-        return $user->hasPermissionTo($permission);
-    }
-
-    /**
-     * Get user count.
-     *
-     * @return int
-     */
-    public function count(): int
-    {
-        return User::count();
-    }
-
-    /**
-     * Get recently created users.
-     *
-     * @param  int  $limit
-     * @return Collection
-     */
-    public function getRecent(int $limit = 10): Collection
-    {
-        return User::latest('created_at')->limit($limit)->get();
     }
 }

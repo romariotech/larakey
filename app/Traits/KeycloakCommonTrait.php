@@ -1,55 +1,59 @@
 <?php
 
-namespace App\Services;
+namespace App\Traits;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
-use InvalidArgumentException;
+use Illuminate\Support\Str;
+use Log;
 use Spatie\Permission\Models\Role;
+use InvalidArgumentException;
 
 use function count;
 
-abstract class KeycloakCommonService
+trait KeycloakCommonTrait
 {
-    protected $baseUrl;
-
-    protected $realm;
-
-    protected $clientId;
-
-    public function __construct()
+    private function getBaseUrl(): string
     {
-        $this->baseUrl = config('services.keycloak.base_url');
-        $this->realm = config('services.keycloak.realms');
-        $this->clientId = config('services.keycloak.client_id');
+        return config('services.keycloak.base_url');
+    }
+
+    private function getRealm(): string
+    {
+        return config('services.keycloak.realms');
+    }
+
+    private function getClientId(): string
+    {
+        return config('services.keycloak.client_id');
     }
 
     /**
-     * Get the Keycloak Admin API URL
+     * Get the Keycloak Admin API URL.
      *
      * @return string
      */
     protected function getKeycloakAdminUrl(): string
     {
-        return "{$this->baseUrl}/admin/realms/{$this->realm}";
+        return "{$this->getBaseUrl()}/admin/realms/{$this->getRealm()}";
     }
 
     /**
-     * Get the Keycloak base URL
+     * Get the Keycloak base URL.
      *
      * @return string
      */
     protected function getKeycloakBaseUrl(): string
     {
-        return "{$this->baseUrl}/realms/{$this->realm}";
+        return "{$this->getBaseUrl()}/realms/{$this->getRealm()}";
     }
 
     /**
-     * Get a Keycloak admin access token and make an authenticated request to the Keycloak Admin API
+     * Make an authenticated request to the Keycloak Admin API.
      *
-     * @param  string  $method
-     * @param  string  $endpoint
-     * @param  mixed  $data
+     * @param string $method HTTP method (GET, POST, PUT, DELETE).
+     * @param string $endpoint API endpoint.
+     * @param mixed|null $data Request payload.
      * @return \Illuminate\Http\Client\Response
      * @throws \Exception
      */
@@ -65,42 +69,40 @@ abstract class KeycloakCommonService
             'POST' => $request->post($url, $data ?? []),
             'PUT' => $request->put($url, $data ?? []),
             'DELETE' => $request->delete($url),
-            default => throw new \Exception("Método HTTP inválido: {$method}"),
+            default => throw new \Exception("Invalid HTTP method: {$method}"),
         };
     }
 
     /**
-     * Get an admin access token from Keycloak
+     * Get an admin access token from Keycloak.
      *
      * @return string
      * @throws \Exception
      */
     public function getKeycloakAdminToken(): string
     {
-        $response = Http::asForm()->post("$this->baseUrl/realms/$this->realm/protocol/openid-connect/token", [
+        $response = Http::asForm()->post("{$this->getBaseUrl()}/realms/{$this->getRealm()}/protocol/openid-connect/token", [
             'client_id' => config('services.keycloak.client_id'),
             'client_secret' => config('services.keycloak.client_secret'),
             'grant_type' => 'client_credentials',
         ]);
 
-        if (!$response->successful()) {
-            throw new \Exception('Falha ao obter token de administrador do Keycloak.');
-        }
+        throw_unless($response->successful(), 'Failed to obtain Keycloak admin token. Status: ' . $response->status() . ' - ' . $response->body());
 
         return $response->json()['access_token'];
     }
 
     /**
-     * Create a new user in Keycloak
+     * Create or update a user in the local database based on Keycloak data.
      *
-     * @param  array  $userData Array com 'username', 'email', 'first_name', 'last_name', 'role' e opcionalmente 'keycloak_id'
+     * @param array $userData User data including 'username', 'email', 'first_name', 'last_name', 'role', and optionally 'keycloak_id'.
      * @return \App\Models\User
      */
     public function createOrUpdateUserFromData(array $userData): User
     {
         $updateData = [
             ...$userData,
-            'password' => bcrypt(str()->random(16)),
+            'password' => bcrypt(Str::random(16)),
         ];
 
         if (isset($userData['keycloak_id'])) {
@@ -114,11 +116,12 @@ abstract class KeycloakCommonService
     }
 
     /**
-     * Sincronyze user roles based on an array of Keycloak roles
+     * Synchronize user roles based on an array of Keycloak roles.
      *
-     * @param  \App\Models\User  $user
-     * @param  array  $keycloakRoles
+     * @param \App\Models\User $user
+     * @param array $keycloakRoles
      * @return void
+     * @throws \InvalidArgumentException
      */
     public function syncUserRolesFromArray(User $user, array $keycloakRoles): void
     {
@@ -129,7 +132,7 @@ abstract class KeycloakCommonService
 
         throw_if(empty($rolesToSync), 'No matching roles found for synchronization. Check available roles and Keycloak configuration.');
 
-        throw_if(count($rolesToSync) > 1, InvalidArgumentException::class, 'Keycloak configuration error: only one role expected per user.');
+        throw_if(count($rolesToSync) > 1, 'Keycloak configuration error: only one role expected per user.');
 
         $user->syncRoles($rolesToSync);
 

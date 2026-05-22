@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
 use App\Services\KeycloakAuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +47,9 @@ class AuthController extends Controller
         $idToken = session('id_token');
 
         Auth::logout();
+
         $request->session()->invalidate();
+
         $request->session()->regenerateToken();
 
         $keycloakLogoutUrl = $this->keycloakAuthService->getKeycloakLogoutUrl($idToken);
@@ -57,19 +60,8 @@ class AuthController extends Controller
     /**
      * Login using external credentials (for API clients)
      */
-    public function loginExternal(Request $request)
+    public function loginExternal(LoginRequest $request)
     {
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-        ], [
-            'username.required' => 'O campo de nome de usuário é obrigatório.',
-            'password.required' => 'O campo de senha é obrigatório.',
-        ], [
-            'username' => 'nome de usuário',
-            'password' => 'senha',
-        ]);
-
         try {
             $tokens = $this->keycloakAuthService->authenticateWithCredentials(
                 $request->username,

@@ -29,14 +29,28 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { index } from '@/routes/users';
 import { useUserService } from '@/services/userService';
 import type { User } from '@/types';
-import { Switch } from '@/components/ui/switch';
 
 const props = defineProps<{
     user?: User;
 }>();
+
+defineOptions({
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Users',
+                href: index(),
+            },
+            {
+                title: 'Form',
+            },
+        ],
+    },
+});
 
 const formSchema = toTypedSchema(
     z.object({
